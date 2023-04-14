@@ -62,12 +62,13 @@ constexpr int OLED_SDC=5;
 SSD1306AsciiWire oled;
 
 // Define menu structure
+// The following macros define the structure of the menu system.
 MENU(mainMenu,"Main menu",doNothing,noEvent,wrapStyle
     ,OP("Option 1",doNothing,noEvent)
     ,OP("Option 2",doNothing,noEvent)
 );
 
-// Define inputs
+// Define pins for navigation buttons
 #define UP_BUTTON D2
 #define DOWN_BUTTON D4
 #define SELECT_BUTTON D7
@@ -101,8 +102,11 @@ MENU_OUTPUTS(out,MAX_DEPTH
   ,NONE
 );
 #else
+// I cannot use macros for the SSD1306AsciiOut driver. Some fundamental parts of the underlying
+// structure appears not to have been properly implemented yet. My attemmpt at a work around
+// hit a brick wall.
 const panel panels[] MEMMODE = {{0, 0, 128 / fontW, 32 / fontH}};
-navNode* nodes[sizeof(panels) / sizeof(panel)]; //navNodes to store navigation status
+navNode* nodes[sizeof(panels) / sizeof(panel)]; 
 panelsList pList(panels, nodes, 1); //a list of panels and nodes
 idx_t tops[MAX_DEPTH] = {0}; //store cursor positions for each level
 SSD1306AsciiOut outOLED(&oled, tops, pList, 8, 1+((fontH-1)>>3) ); //oled output device menu driver
@@ -113,12 +117,19 @@ outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
 NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
 
 void setup() {
-    btns.begin();
+    btns.begin(); // Does all the setup for mapping gpio btns to simualted keystrokes.
+    
+    // Blinky
     pinMode(LED, OUTPUT);
+
+    // Not teensy so actual setup needed
     Serial.begin(9600);
     while(!Serial);
+
     Serial.printf("\nstm32menu2\n");
     Serial.flush();
+
+    // Initialise the I2C and the OLED display
     Wire.begin();
     oled.begin(&Adafruit128x32, I2C_ADDRESS);
     oled.setFont(menuFont);
@@ -132,8 +143,11 @@ void setup() {
 }
 
 void loop() {
+    // Blinky
     digitalToggle(LED);
     delay(200);
+
+    // Poll for button presses
     nav.poll();
 }
 
