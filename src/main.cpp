@@ -26,13 +26,24 @@
   ZevvPeep8x16
 
 */
+
+/*
+#include <menuIO/keyIn.h>
+#include <menuIO/chainStream.h>
+//joystick button pin
+#define joyBtn 4
+keyMap btnsMap[]={{-joyBtn,defaultNavCodes[enterCmd].ch}};//negative pin numbers use internal pull-up, this is on when low
+keyIn<1> btns(btnsMap);// 1 is the number of keys
+MENU_INPUTS(in,&ay,&btns,&menuSerialIn);
+*/
 #include <Arduino.h>
 
 #include "SSD1306Ascii.h"
 #include "SSD1306AsciiWire.h"
 #include <menu.h>
 #include <menuIO/SSD1306AsciiOut.h>
-#include <menuIO/serialIO.h>
+#include <menuIO/keyIn.h>
+#include <menuIO/chainStream.h>
 
 static int LED = D13;
 
@@ -56,8 +67,26 @@ MENU(mainMenu,"Main menu",doNothing,noEvent,wrapStyle
     ,OP("Option 2",doNothing,noEvent)
 );
 
+// Define inputs
+#define UP_BUTTON D2
+#define DOWN_BUTTON D4
+#define SELECT_BUTTON D7
+#define ESC_BUTTON D8
+#define NUMBER_OF_BUTTONS 4
+
+//negative pin numbers use internal pull-up
+keyMap btnsMap[]={{-UP_BUTTON,defaultNavCodes[upCmd].ch}
+                ,{-DOWN_BUTTON,defaultNavCodes[downCmd].ch} 
+                ,{-SELECT_BUTTON,defaultNavCodes[enterCmd].ch} 
+                ,{-ESC_BUTTON,defaultNavCodes[escCmd].ch} 
+                };
+
+keyIn<NUMBER_OF_BUTTONS> btns(btnsMap);
+
+MENU_INPUTS(in,&btns);
+
 // Define outputs
-#define MAX_DEPTH 2
+#define MAX_DEPTH 1
 
 #ifdef USE_MACROS_FOR_MENU_OUTPUTS
 #define VAR_SSD1306ASCII_OUT(id,md,n,gfx,color,fontW,fontH,...)\
@@ -75,13 +104,16 @@ MENU_OUTPUTS(out,MAX_DEPTH
 const panel panels[] MEMMODE = {{0, 0, 128 / fontW, 32 / fontH}};
 navNode* nodes[sizeof(panels) / sizeof(panel)]; //navNodes to store navigation status
 panelsList pList(panels, nodes, 1); //a list of panels and nodes
-idx_t tops[MAX_DEPTH] = {0, 0}; //store cursor positions for each level
+idx_t tops[MAX_DEPTH] = {0}; //store cursor positions for each level
 SSD1306AsciiOut outOLED(&oled, tops, pList, 8, 1+((fontH-1)>>3) ); //oled output device menu driver
 menuOut* constMEM outputs[] MEMMODE = {&outOLED}; //list of output devices
 outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
 #endif
 
+NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
+
 void setup() {
+    btns.begin();
     pinMode(LED, OUTPUT);
     Serial.begin(9600);
     while(!Serial);
@@ -102,5 +134,6 @@ void setup() {
 void loop() {
     digitalToggle(LED);
     delay(200);
+    nav.poll();
 }
 
