@@ -66,6 +66,10 @@ SSD1306AsciiWire oled;
 MENU(mainMenu,"Main menu",doNothing,noEvent,wrapStyle
     ,OP("Option 1",doNothing,noEvent)
     ,OP("Option 2",doNothing,noEvent)
+    ,OP("Option 3",doNothing,noEvent)
+    ,OP("Option 4",doNothing,noEvent)
+    ,OP("Option 5",doNothing,noEvent)
+    ,OP("Option 6",doNothing,noEvent)
 );
 
 // Define pins for navigation buttons
@@ -143,9 +147,9 @@ void setup() {
 }
 
 void loop() {
-    // Blinky
-    digitalToggle(LED);
-    delay(200);
+    // Blinky - enabling this can make the button detection a bit jerky.
+    //digitalToggle(LED);
+    //delay(200);
 
     // Poll for button presses
     nav.poll();
