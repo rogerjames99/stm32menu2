@@ -61,16 +61,116 @@ constexpr int OLED_SDC=5;
 // Instantiate the display
 SSD1306AsciiWire oled;
 
+// Menu action functions
+result action1(eventMask e,navNode& nav, prompt &item) {
+  Serial.print("action1 event:");
+  Serial.println(e);
+  Serial.flush();
+  return proceed;
+}
+
+result action2(eventMask e) {
+  Serial.print("action2 event:");
+  Serial.println(e);
+  Serial.flush();
+  return quit;
+}
+
+result showEvent(eventMask e) {
+  Serial.print("event: ");
+  Serial.println(e);
+  return proceed;
+}
+
+result alert(menuOut& o,idleEvent e) {
+  if (e==idling) {
+    o.setCursor(0,0);
+    o.print("alert test");
+    o.setCursor(0,1);
+    o.print("[select] to continue...");
+  }
+  return proceed;
+}
+
+result doAlert(eventMask e, prompt &item);
+
+
+int ledCtrl=LOW;
+result myLedOn() {
+  ledCtrl=HIGH;
+  return proceed;
+}
+result myLedOff() {
+  ledCtrl=LOW;
+  return proceed;
+}
+
+//customizing a prompt look!
+//by extending the prompt class
+class altPrompt:public prompt {
+public:
+  altPrompt(constMEM promptShadow& p):prompt(p) {}
+  Used printTo(navRoot &root,bool sel,menuOut& out, idx_t idx,idx_t len,idx_t) override {
+    return out.printRaw(F("special prompt!"),len);;
+  }
+};
+
+// Menu fields
+int test=55;
+
+
 // Define menu structure
 // The following macros define the structure of the menu system.
+int selTest=0;
+SELECT(selTest,selMenu,"Select",doNothing,noEvent,wrapStyle
+  ,VALUE("Zero",0,doNothing,noEvent)
+  ,VALUE("One",1,doNothing,noEvent)
+  ,VALUE("Two",2,doNothing,noEvent)
+);
+
+TOGGLE(ledCtrl,setLed,"Led: ",doNothing,noEvent,wrapStyle//,doExit,enterEvent,noStyle
+  ,VALUE("On",HIGH,doNothing,noEvent)
+  ,VALUE("Off",LOW,doNothing,noEvent)
+);
+
+int chooseTest=-1;
+CHOOSE(chooseTest,chooseMenu,"Choose",doNothing,noEvent,wrapStyle
+  ,VALUE("First",1,doNothing,noEvent)
+  ,VALUE("Second",2,doNothing,noEvent)
+  ,VALUE("Third",3,doNothing,noEvent)
+  ,VALUE("Last",-1,doNothing,noEvent)
+);
+
+MENU(subMenu,"Sub-Menu",doNothing,anyEvent,wrapStyle
+  ,OP("Sub1",showEvent,enterEvent)
+  ,OP("Sub2",showEvent,enterEvent)
+  ,OP("Sub3",showEvent,enterEvent)
+  ,altOP(altPrompt,"",showEvent,enterEvent)
+  ,EXIT("<Back")
+);
+
 MENU(mainMenu,"Main menu",doNothing,noEvent,wrapStyle
+  ,OP("Op1",action1,anyEvent)
+  ,OP("Op2",action2,enterEvent)
+  ,FIELD(test,"Test","%",0,100,10,1,doNothing,noEvent,wrapStyle)
+  ,SUBMENU(subMenu)
+  ,SUBMENU(setLed)
+  ,OP("LED On",myLedOn,enterEvent)
+  ,OP("LED Off",myLedOff,enterEvent)
+  ,SUBMENU(selMenu)
+  ,SUBMENU(chooseMenu)
+  ,OP("Alert test",doAlert,enterEvent)
+  ,EXIT("<Back")
+);
+
+/*MENU(mainMenu,"Main menu",doNothing,noEvent,wrapStyle
     ,OP("Option 1",doNothing,noEvent)
     ,OP("Option 2",doNothing,noEvent)
     ,OP("Option 3",doNothing,noEvent)
     ,OP("Option 4",doNothing,noEvent)
     ,OP("Option 5",doNothing,noEvent)
     ,OP("Option 6",doNothing,noEvent)
-);
+);*/
 
 // Define pins for navigation buttons
 #define UP_BUTTON D2
@@ -91,7 +191,7 @@ keyIn<NUMBER_OF_BUTTONS> btns(btnsMap);
 MENU_INPUTS(in,&btns);
 
 // Define outputs
-#define MAX_DEPTH 1
+#define MAX_DEPTH 2
 
 #ifdef USE_MACROS_FOR_MENU_OUTPUTS
 #define VAR_SSD1306ASCII_OUT(id,md,n,gfx,color,fontW,fontH,...)\
@@ -119,6 +219,11 @@ outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
 #endif
 
 NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
+
+result doAlert(eventMask e, prompt &item) {
+  nav.idleOn(alert);
+  return proceed;
+}
 
 void setup() {
     btns.begin(); // Does all the setup for mapping gpio btns to simualted keystrokes.
