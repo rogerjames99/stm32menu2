@@ -45,7 +45,30 @@ MENU_INPUTS(in,&ay,&btns,&menuSerialIn);
 #include <menuIO/keyIn.h>
 #include <menuIO/chainStream.h>
 
-static int LED = D13;
+// Local scope
+#ifdef ARDUINO_TEENSY41
+    static constexpr int LED = LED_BUILTIN;
+    static constexpr int UP_BUTTON = A1;
+    static constexpr int DOWN_BUTTON = A2;
+    static constexpr int SELECT_BUTTON = A3;
+    static constexpr int ESC_BUTTON = A4;
+#else
+    #ifdef ARDUINO_NUCLEO_F103RB
+        static constexpr int LED = D13;
+        static constexpr int UP_BUTTON = D2;
+        static constexpr int DOWN_BUTTON = D4;
+        static constexpr int SELECT_BUTTON = D7;
+        static constexpr int ESC_BUTTON = D8;
+    #else
+        #pragma GCC error "Unknown board type"
+        #include "/stophere" // Trick to stop further compilation I hope this does not exist!
+    #endif
+#endif
+static constexpr int NUMBER_OF_BUTTONS = 4;
+static int ledCtrl=LOW;
+static int test=55;
+static int selTest=0;
+static int chooseTest=-1;
 
 using namespace Menu;
 
@@ -56,33 +79,33 @@ using namespace Menu;
 
 constexpr int OLED_SDA=4;
 constexpr int OLED_SDC=5;
-#define I2C_ADDRESS 0x3C
+static constexpr int I2C_ADDRESS = 0x3C;
 
 // Instantiate the display
-SSD1306AsciiWire oled;
+static SSD1306AsciiWire oled;
 
 // Menu action functions
-result action1(eventMask e,navNode& nav, prompt &item) {
+static result action1(eventMask e,navNode& nav, prompt &item) {
   Serial.print("action1 event:");
   Serial.println(e);
   Serial.flush();
   return proceed;
 }
 
-result action2(eventMask e) {
+static result action2(eventMask e) {
   Serial.print("action2 event:");
   Serial.println(e);
   Serial.flush();
   return quit;
 }
 
-result showEvent(eventMask e) {
+static result showEvent(eventMask e) {
   Serial.print("event: ");
   Serial.println(e);
   return proceed;
 }
 
-result alert(menuOut& o,idleEvent e) {
+static result alert(menuOut& o,idleEvent e) {
   if (e==idling) {
     o.setCursor(0,0);
     o.print("alert test");
@@ -92,15 +115,14 @@ result alert(menuOut& o,idleEvent e) {
   return proceed;
 }
 
-result doAlert(eventMask e, prompt &item);
+static result doAlert(eventMask e, prompt &item);
 
-
-int ledCtrl=LOW;
-result myLedOn() {
+static result myLedOn() {
   ledCtrl=HIGH;
   return proceed;
 }
-result myLedOff() {
+
+static result myLedOff() {
   ledCtrl=LOW;
   return proceed;
 }
@@ -115,13 +137,8 @@ public:
   }
 };
 
-// Menu fields
-int test=55;
-
-
 // Define menu structure
 // The following macros define the structure of the menu system.
-int selTest=0;
 SELECT(selTest,selMenu,"Select",doNothing,noEvent,wrapStyle
   ,VALUE("Zero",0,doNothing,noEvent)
   ,VALUE("One",1,doNothing,noEvent)
@@ -133,7 +150,6 @@ TOGGLE(ledCtrl,setLed,"Led: ",doNothing,noEvent,wrapStyle//,doExit,enterEvent,no
   ,VALUE("Off",LOW,doNothing,noEvent)
 );
 
-int chooseTest=-1;
 CHOOSE(chooseTest,chooseMenu,"Choose",doNothing,noEvent,wrapStyle
   ,VALUE("First",1,doNothing,noEvent)
   ,VALUE("Second",2,doNothing,noEvent)
@@ -162,22 +178,6 @@ MENU(mainMenu,"Main menu",doNothing,noEvent,wrapStyle
   ,OP("Alert test",doAlert,enterEvent)
   ,EXIT("<Back")
 );
-
-/*MENU(mainMenu,"Main menu",doNothing,noEvent,wrapStyle
-    ,OP("Option 1",doNothing,noEvent)
-    ,OP("Option 2",doNothing,noEvent)
-    ,OP("Option 3",doNothing,noEvent)
-    ,OP("Option 4",doNothing,noEvent)
-    ,OP("Option 5",doNothing,noEvent)
-    ,OP("Option 6",doNothing,noEvent)
-);*/
-
-// Define pins for navigation buttons
-#define UP_BUTTON D2
-#define DOWN_BUTTON D4
-#define SELECT_BUTTON D7
-#define ESC_BUTTON D8
-#define NUMBER_OF_BUTTONS 4
 
 //negative pin numbers use internal pull-up
 keyMap btnsMap[]={{-UP_BUTTON,defaultNavCodes[upCmd].ch}
@@ -220,18 +220,18 @@ outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
 
 NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
 
+// This has to be after NAVROOT becuase the nav object is declared by the NAVROOT macro.
 result doAlert(eventMask e, prompt &item) {
   nav.idleOn(alert);
   return proceed;
 }
 
 void setup() {
-    btns.begin(); // Does all the setup for mapping gpio btns to simualted keystrokes.
+    btns.begin(); // Does all the setup for mapping gpio btns to simulated keystrokes.
     
     // Blinky
     pinMode(LED, OUTPUT);
 
-    // Not teensy so actual setup needed
     Serial.begin(9600);
     while(!Serial);
 
@@ -252,7 +252,7 @@ void setup() {
 }
 
 void loop() {
-    // Blinky - enabling this can make the button detection a bit jerky.
+    // Blinky - uncommenting this this can make the button detection a bit jerky.
     //digitalToggle(LED);
     //delay(200);
 
