@@ -60,6 +60,10 @@ static int ledCtrl=LOW;
 static int test=55;
 static int selTest=0;
 static int chooseTest=-1;
+static int last_millis = 0;
+static bool blinking = false;
+static constexpr int BLINK_EVERY = 10000; // Milliseconds
+static constexpr int BLINK_DURATION = 100; // Milliseconds
 
 using namespace Menu;
 
@@ -201,7 +205,7 @@ MENU_OUTPUTS(out, MAX_DEPTH, SSD1306ASCII_OUT(oled,
 
 NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
 
-// This has to be after NAVROOT becuase the nav object is declared by the NAVROOT macro.
+// This has to be after NAVROOT because the nav object is declared by the NAVROOT macro.
 result doAlert(eventMask e, prompt &item) {
  // nav.idleOn(alert);
   return proceed;
@@ -212,6 +216,9 @@ void setup() {
     
     // Blinky
     pinMode(LED, OUTPUT);
+    digitalToggle(LED);
+    delay(1000);
+    digitalToggle(LED);
 
     Serial.begin(9600);
     while(!Serial);
@@ -233,9 +240,26 @@ void setup() {
 }
 
 void loop() {
-    // Blinky - uncommenting this this can make the button detection a bit jerky.
-    //digitalToggle(LED);
-    //delay(200);
+    // Minimise use of delays in loop
+    int current_millis = millis();
+    if (blinking)
+    {
+        if ((current_millis - last_millis) > BLINK_DURATION)
+        {
+            last_millis = current_millis;
+            digitalToggle(LED);
+            blinking = false;
+        }
+    }
+    else
+    {
+        if ((current_millis - last_millis) > BLINK_EVERY)
+        {
+            last_millis = current_millis;
+            digitalToggle(LED);
+            blinking = true;
+        }
+    }
 
     // Poll for button presses
     nav.poll();
