@@ -39,10 +39,10 @@
 // Local scope
 #ifdef ARDUINO_TEENSY41
     static constexpr int LED = LED_BUILTIN;
-    static constexpr int UP_BUTTON = A1;
-    static constexpr int DOWN_BUTTON = A2;
-    static constexpr int SELECT_BUTTON = A3;
-    static constexpr int ESC_BUTTON = A4;
+    static constexpr int UP_BUTTON = A0;
+    static constexpr int DOWN_BUTTON = A1;
+    static constexpr int SELECT_BUTTON = A2;
+    static constexpr int ESC_BUTTON = A3;
 #else
     #ifdef ARDUINO_NUCLEO_F103RB
         static constexpr int LED = D13;
