@@ -27,15 +27,6 @@
 
 */
 
-/*
-#include <menuIO/keyIn.h>
-#include <menuIO/chainStream.h>
-//joystick button pin
-#define joyBtn 4
-keyMap btnsMap[]={{-joyBtn,defaultNavCodes[enterCmd].ch}};//negative pin numbers use internal pull-up, this is on when low
-keyIn<1> btns(btnsMap);// 1 is the number of keys
-MENU_INPUTS(in,&ay,&btns,&menuSerialIn);
-*/
 #include <Arduino.h>
 
 #include "SSD1306Ascii.h"
@@ -105,6 +96,7 @@ static result showEvent(eventMask e) {
   return proceed;
 }
 
+/*
 static result alert(menuOut& o,idleEvent e) {
   if (e==idling) {
     o.setCursor(0,0);
@@ -113,7 +105,7 @@ static result alert(menuOut& o,idleEvent e) {
     o.print("[select] to continue...");
   }
   return proceed;
-}
+*/
 
 static result doAlert(eventMask e, prompt &item);
 
@@ -193,36 +185,25 @@ MENU_INPUTS(in,&btns);
 // Define outputs
 #define MAX_DEPTH 2
 
-#ifdef USE_MACROS_FOR_MENU_OUTPUTS
-#define VAR_SSD1306ASCII_OUT(id,md,n,gfx,color,fontW,fontH,...)\
+#define VAR_SSD1306ASCII_OUT(id,md,n,device,resX,resY,...)\
 Menu::idx_t id##Tops##n[md];\
 PANELS(id##Panels##n,__VA_ARGS__);\
-Menu::SSD1306AsciiOut id##n(gfx,color,id##Tops##n,id##Panels##n,fontW,fontH);
+Menu::SSD1306AsciiOut id##n(&device,id##Tops##n,id##Panels##n,resX,resY);
 
-#define REF_SSD1306ASCII_OUT(id,md,n,...) &id##n
+#define REF_SSD1306ASCII_OUT(id,md,n,...) &id##n,
 
-MENU_OUTPUTS(out,MAX_DEPTH
-  ,SSD1306ASCII_OUT(myMenuDevice, 1, &oled, myMenuDevice_tops, myMenuDevice_pList, 8, 1+((fontH-1)>>3) )
-  ,NONE
-);
-#else
-// I cannot use macros for the SSD1306AsciiOut driver. Some fundamental parts of the underlying
-// structure appears not to have been properly implemented yet. My attemmpt at a work around
-// hit a brick wall.
-const panel panels[] MEMMODE = {{0, 0, 128 / fontW, 32 / fontH}};
-navNode* nodes[sizeof(panels) / sizeof(panel)]; 
-panelsList pList(panels, nodes, 1); //a list of panels and nodes
-idx_t tops[MAX_DEPTH] = {0}; //store cursor positions for each level
-SSD1306AsciiOut outOLED(&oled, tops, pList, 8, 1+((fontH-1)>>3) ); //oled output device menu driver
-menuOut* constMEM outputs[] MEMMODE = {&outOLED}; //list of output devices
-outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
-#endif
+// This works for me on the cheap 128x32 display I have - I suspect X and Y are reversed.
+MENU_OUTPUTS(out, MAX_DEPTH, SSD1306ASCII_OUT(oled,
+                                            fontH,
+                                            1+((fontH-1)>>3),
+                                            {0, 0, 128 / fontW, 32 / fontH}),
+                                            NONE);
 
 NAVROOT(nav,mainMenu,MAX_DEPTH,in,out);
 
 // This has to be after NAVROOT becuase the nav object is declared by the NAVROOT macro.
 result doAlert(eventMask e, prompt &item) {
-  nav.idleOn(alert);
+ // nav.idleOn(alert);
   return proceed;
 }
 
@@ -244,7 +225,7 @@ void setup() {
     oled.setFont(menuFont);
     oled.clear();
     oled.setCursor(0, 0);
-    oled.print("stm32menu2");
+    oled.print("menutest");
     oled.setCursor(0, 2);
     oled.print("SSD1306Ascii");
     delay(2000);
