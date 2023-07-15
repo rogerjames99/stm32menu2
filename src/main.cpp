@@ -255,6 +255,7 @@ void loop() {
     {
         if ((current_millis - last_millis) > BLINK_EVERY)
         {
+            Serial.printf("Blink!\n");
             last_millis = current_millis;
             digitalToggle(LED);
             blinking = true;
